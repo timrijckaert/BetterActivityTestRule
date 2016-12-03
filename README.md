@@ -9,7 +9,7 @@ You can check out the sample provided in the repository.
 @get:Rule var betterActivityTestRule: BetterActivityTestRule<*> = BetterActivityTestRule(MainActivity::class.java)
 ```
 
-###Clean Status Bar
+###Demo Mode (API 23+)
 ```kotlin
 betterActivityTestRule.setClock("0730")
 betterActivityTestRule.setBatteryLevel(100, false)
