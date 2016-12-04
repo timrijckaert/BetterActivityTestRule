@@ -25,10 +25,15 @@ class ExampleInstrumentedTest {
         val softKeyboardButton = betterActivityTestRule.activity.findViewById(R.id.soft_keyboard_button)
         softKeyboardButton.callOnClick()
 
+        val softKeyboardEditText = betterActivityTestRule.activity.findViewById(R.id.soft_keyboard_edittext)
+        softKeyboardEditText.callOnClick()
+
         betterActivityTestRule.setClock("0730")
         betterActivityTestRule.setBatteryLevel(100, false)
         betterActivityTestRule.setWifiLevel(BetterActivityTestRule.WifiLevel.LEVEL_3)
         betterActivityTestRule.hideNotifications(true)
+
+        Thread.sleep(10000)
 
         assertEquals("be.rijckaert.tim.disableanimations", appContext.packageName)
     }

@@ -15,4 +15,9 @@
         android:layout_height="wrap_content"
         android:id="@+id/soft_keyboard_button"
         android:onClick="showSoftKeyboard"/>
+
+    <EditText
+        android:id="@+id/soft_keyboard_edittext"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
 </LinearLayout>

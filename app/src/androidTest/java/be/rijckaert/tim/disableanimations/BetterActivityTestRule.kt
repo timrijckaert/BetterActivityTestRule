@@ -1,13 +1,17 @@
 package be.rijckaert.tim.disableanimations
 
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import android.support.test.InstrumentationRegistry.getInstrumentation
 import android.support.test.rule.ActivityTestRule
 import android.support.test.uiautomator.UiDevice
+import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
+
 
 /**
  * Created by TimR.
@@ -43,7 +47,7 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
             base.evaluate()
         } finally {
             setInTestMode(false)
-            deviceSleep()
+            //deviceSleep()
         }
     }
 
@@ -55,7 +59,22 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
     }
 
     private fun toggleSoftKeyboard(isEnabled: Boolean) {
+        //Disable hardware keyboard (useful for emulators)
+        //http://www.drewhannay.com/2016/04/how-to-hide-android-soft-keyboard-in.html
         device?.executeShellCommand("settings put secure show_ime_with_hard_keyboard " + booleanToInt(isEnabled))
+
+        //hacky! But Android does not have a good way to check whether the keyboard was shown
+        val viewGroup = (launchActivity.findViewById(android.R.id.content) as ViewGroup).getChildAt(0) as ViewGroup
+        viewGroup.viewTreeObserver.addOnGlobalLayoutListener {
+            val isShowingKeyboard = device?.executeShellCommand("dumpsys window InputMethod")?.contains("mHasSurface=true")
+            if (isShowingKeyboard == true) {
+                val view = launchActivity.currentFocus
+                if (view != null) {
+                    val imm = launchActivity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(view.windowToken, 0)
+                }
+            }
+        }
     }
 
     private fun toggleAnimations(isEnabled: Boolean) {
