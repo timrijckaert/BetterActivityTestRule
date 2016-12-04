@@ -33,8 +33,6 @@ class ExampleInstrumentedTest {
         betterActivityTestRule.setWifiLevel(BetterActivityTestRule.WifiLevel.LEVEL_3)
         betterActivityTestRule.hideNotifications(true)
 
-        Thread.sleep(10000)
-
         assertEquals("be.rijckaert.tim.disableanimations", appContext.packageName)
     }
 }

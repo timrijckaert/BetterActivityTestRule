@@ -47,7 +47,7 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
             base.evaluate()
         } finally {
             setInTestMode(false)
-            //deviceSleep()
+            deviceSleep()
         }
     }
 
