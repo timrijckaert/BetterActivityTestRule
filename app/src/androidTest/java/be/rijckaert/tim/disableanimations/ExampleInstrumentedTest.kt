@@ -30,7 +30,8 @@ class ExampleInstrumentedTest {
 
         betterActivityTestRule.setClock("0730")
         betterActivityTestRule.setBatteryLevel(100, false)
-        betterActivityTestRule.setWifiLevel(BetterActivityTestRule.WifiLevel.LEVEL_3)
+        betterActivityTestRule.setWifiLevel(BetterActivityTestRule.ConnectivityLevel.LEVEL_3)
+        betterActivityTestRule.setNetworkStatus(BetterActivityTestRule.ConnectivityLevel.LEVEL_2, BetterActivityTestRule.DataType.GEN_4)
         betterActivityTestRule.hideNotifications(true)
 
         assertEquals("be.rijckaert.tim.disableanimations", appContext.packageName)

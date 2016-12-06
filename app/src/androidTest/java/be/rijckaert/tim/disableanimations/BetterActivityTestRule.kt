@@ -151,22 +151,38 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
         device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command clock -e hhmm $hhmm")
     }
 
-    fun setWifiLevel(wifiLevel: WifiLevel) {
-        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level ${wifiLevel.level}")
+    fun setWifiLevel(connectivityLevel: ConnectivityLevel = ConnectivityLevel.LEVEL_4) {
+        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level ${connectivityLevel.level}")
     }
 
     fun hideNotifications(isNotificationVisible: Boolean) {
         device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command notifications -e visible $isNotificationVisible")
     }
 
-    fun setBatteryLevel(batterLevelPercentage: Int, isPlugged: Boolean) {
+    fun setBatteryLevel(batterLevelPercentage: Int, isPlugged: Boolean = true) {
         if (batterLevelPercentage > 100 || batterLevelPercentage < 0) {
             throw IllegalArgumentException("Dude, seriously?!")
         }
         device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command battery -e batterLevelPercentage $batterLevelPercentage -e plugged $isPlugged")
     }
 
-    enum class WifiLevel(val level: String) {
+    fun setNetworkStatus(connectivityLevel: ConnectivityLevel = ConnectivityLevel.LEVEL_4, datatype : DataType = DataType.LTE) {
+        device?.executeShellCommand("adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level ${connectivityLevel.level} -e datatype ${datatype.dataType}")
+    }
+
+    enum class DataType(val dataType: String) {
+        NONE("none"),
+        GEN_1("1x"),
+        GEN_3("3g"),
+        GEN_4("4g"),
+        EDGE("e"),
+        GPRS("g"),
+        HSDPA("h"),
+        LTE("lte"),
+        ROAMING("roam")
+    }
+
+    enum class ConnectivityLevel(val level: String) {
         LEVEL_1("1"),
         LEVEL_2("2"),
         LEVEL_3("3"),
