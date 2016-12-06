@@ -1,11 +1,18 @@
 package be.rijckaert.tim.disableanimations
 
+import android.annotation.TargetApi
 import android.app.Activity
+import android.app.Instrumentation
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import android.support.test.InstrumentationRegistry.getInstrumentation
 import android.support.test.rule.ActivityTestRule
 import android.support.test.uiautomator.UiDevice
+import android.support.test.uiautomator.UiScrollable
+import android.support.test.uiautomator.UiSelector
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
@@ -23,18 +30,20 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
     }
 
     lateinit var launchActivity: Activity
+    lateinit var instrumentation : Instrumentation
     var device: UiDevice? = null
 
     override fun apply(userTest: Statement, description: Description): Statement {
         return object : Statement() {
             override fun evaluate() {
-                device = UiDevice.getInstance(getInstrumentation())
+                instrumentation = getInstrumentation()
+                device = UiDevice.getInstance(instrumentation)
                 deviceWakeUp()
+
+                grantScalePermission()
 
                 launchActivity = launchActivity(activityIntent)
                 installWakeLock()
-
-                grantScalePermission()
 
                 runTest(userTest)
             }
@@ -126,8 +135,42 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
      *
      */
     private fun grantScalePermission() {
-        device?.executeShellCommand("pm grant ${launchActivity.packageName} $ANIMATION_SCALE_PERMISSION")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("pm grant ${launchActivity.packageName} $ANIMATION_SCALE_PERMISSION")
+            return
+        }
+
+        grantScalePermissionCompat()
     }
+
+    private fun grantScalePermissionCompat() {
+        openDevelopersOptionsMenu()
+        var settingRecyclerView: UiScrollable = UiScrollable(UiSelector()
+                .className(ClassName.RECYCLER_VIEW.className)
+                .resourceId("com.android.settings:id/list"))
+
+        AnimationScaleType.values().forEach {
+            settingRecyclerView?.getChildByText(
+                    UiSelector()
+                            .className(ClassName.TEXT_VIEW.className), it.transitionName).clickAndWaitForNewWindow()
+
+            val list = UiScrollable(UiSelector()
+                    .className(ClassName.LIST_VIEW.className)
+                    .resourceId("android:id/select_dialog_listview"))
+
+            list.getChild(UiSelector().index(getIndexForToggle(false))).click()
+        }
+    }
+
+    private fun openDevelopersOptionsMenu() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        instrumentation.context.startActivity(intent)
+    }
+
+    private fun getIndexForToggle(enabled: Boolean): Int = if (enabled) 2 else 0
 
     enum class AnimationType(val shellCommand: String) {
         WINDOW_ANIMATION_SCALE("settings put global window_animation_scale "),
@@ -137,9 +180,10 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
     //</editor-fold>
 
     //<editor-fold desc="Demo Mode">
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private fun setDemoMode(inDemoMode: Boolean) {
-        val currentApiVersion = android.os.Build.VERSION.SDK_INT
-        if (currentApiVersion >= android.os.Build.VERSION_CODES.M) {
+        val currentApiVersion = Build.VERSION.SDK_INT
+        if (currentApiVersion >= Build.VERSION_CODES.M) {
             device?.executeShellCommand("settings put global sysui_demo_allowed" + booleanToInt(inDemoMode))
 
             val command = "am broadcast -a com.android.systemui.demo -e command" + if (inDemoMode) "enter" else "exit"
@@ -147,27 +191,43 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun setClock(hhmm: String = "0700") {
-        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command clock -e hhmm $hhmm")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command clock -e hhmm $hhmm")
+        }
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun setWifiLevel(connectivityLevel: ConnectivityLevel = ConnectivityLevel.LEVEL_4) {
-        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level ${connectivityLevel.level}")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level ${connectivityLevel.level}")
+        }
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun hideNotifications(isNotificationVisible: Boolean) {
-        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command notifications -e visible $isNotificationVisible")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command notifications -e visible $isNotificationVisible")
+        }
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun setBatteryLevel(batterLevelPercentage: Int, isPlugged: Boolean = true) {
         if (batterLevelPercentage > 100 || batterLevelPercentage < 0) {
             throw IllegalArgumentException("Dude, seriously?!")
         }
-        device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command battery -e batterLevelPercentage $batterLevelPercentage -e plugged $isPlugged")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("am broadcast -a com.android.systemui.demo -e command battery -e batterLevelPercentage $batterLevelPercentage -e plugged $isPlugged")
+        }
     }
 
-    fun setNetworkStatus(connectivityLevel: ConnectivityLevel = ConnectivityLevel.LEVEL_4, datatype : DataType = DataType.LTE) {
-        device?.executeShellCommand("adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level ${connectivityLevel.level} -e datatype ${datatype.dataType}")
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    fun setNetworkStatus(connectivityLevel: ConnectivityLevel = ConnectivityLevel.LEVEL_4, datatype: DataType = DataType.LTE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            device?.executeShellCommand("adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level ${connectivityLevel.level} -e datatype ${datatype.dataType}")
+        }
     }
 
     enum class DataType(val dataType: String) {
@@ -187,6 +247,18 @@ class BetterActivityTestRule<T : Activity>(activityClass: Class<T>) : ActivityTe
         LEVEL_2("2"),
         LEVEL_3("3"),
         LEVEL_4("4")
+    }
+
+    enum class ClassName(val className: String) {
+        RECYCLER_VIEW("android.support.v7.widget.RecyclerView"),
+        LIST_VIEW("android.widget.ListView"),
+        TEXT_VIEW("android.widget.TextView"),
+    }
+
+    enum class AnimationScaleType(val transitionName: String) {
+        WINDOW_ANIMATION_SCALE("Window animation scale"),
+        TRANSITION_ANIMATION_SCALE("Transition animation scale"),
+        ANIMATOR_DURATION_SCALE("Animator duration scale")
     }
     //</editor-fold>
 }
